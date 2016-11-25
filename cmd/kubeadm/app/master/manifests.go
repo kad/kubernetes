@@ -63,6 +63,7 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration) error {
 			VolumeMounts:  []api.VolumeMount{certsVolumeMount(), k8sVolumeMount()},
 			LivenessProbe: componentProbe(8080, "/healthz"),
 			Resources:     componentResources("250m"),
+			Env:           getProxyEnvVars(),
 		}, certsVolume(cfg), k8sVolume(cfg)),
 		kubeControllerManager: componentPod(api.Container{
 			Name:          kubeControllerManager,
@@ -71,6 +72,7 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration) error {
 			VolumeMounts:  []api.VolumeMount{certsVolumeMount(), k8sVolumeMount()},
 			LivenessProbe: componentProbe(10252, "/healthz"),
 			Resources:     componentResources("200m"),
+			Env:           getProxyEnvVars(),
 		}, certsVolume(cfg), k8sVolume(cfg)),
 		kubeScheduler: componentPod(api.Container{
 			Name:          kubeScheduler,
@@ -78,6 +80,7 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration) error {
 			Command:       getSchedulerCommand(cfg),
 			LivenessProbe: componentProbe(10251, "/healthz"),
 			Resources:     componentResources("100m"),
+			Env:           getProxyEnvVars(),
 		}),
 	}
 
@@ -313,4 +316,22 @@ func getProxyCommand(cfg *kubeadmapi.MasterConfiguration) (command []string) {
 	command = getComponentBaseCommand(proxy)
 
 	return
+}
+
+func getProxyEnvVars() []api.EnvVar {
+	envs := []api.EnvVar{}
+	for _, env := range os.Environ() {
+		pos := strings.Index(env, "=")
+		if pos == -1 {
+			// malformed environment variable, skip it.
+			continue
+		}
+		name := env[:pos]
+		value := env[pos+1:]
+		if strings.HasSuffix(strings.ToLower(name), "_proxy") && value != "" {
+			envVar := api.EnvVar{Name: name, Value: value}
+			envs = append(envs, envVar)
+		}
+	}
+	return envs
 }
