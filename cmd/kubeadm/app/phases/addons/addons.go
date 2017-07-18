@@ -44,8 +44,12 @@ func CreateEssentialAddons(cfg *kubeadmapi.MasterConfiguration, client *clientse
 		return fmt.Errorf("error when parsing kube-proxy configmap template: %v", err)
 	}
 
+	repoPrefix := cfg.ImageRepository
+	if cfg.CIImageRepository != "" {
+		repoPrefix = cfg.CIImageRepository
+	}
 	proxyDaemonSetBytes, err := kubeadmutil.ParseTemplate(KubeProxyDaemonSet, struct{ ImageRepository, Arch, Version, ImageOverride, ClusterCIDR, MasterTaintKey, CloudTaintKey string }{
-		ImageRepository: cfg.ImageRepository,
+		ImageRepository: repoPrefix,
 		Arch:            runtime.GOARCH,
 		Version:         kubeadmutil.KubernetesVersionToImageTag(cfg.KubernetesVersion),
 		ImageOverride:   cfg.UnifiedControlPlaneImage,
