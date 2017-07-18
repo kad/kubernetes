@@ -34,6 +34,7 @@ const (
 	DefaultCertificatesDir    = "/etc/kubernetes/pki"
 	DefaultEtcdDataDir        = "/var/lib/etcd"
 	DefaultImageRepository    = "gcr.io/google_containers"
+	DefaultCIImageRepository  = "gcr.io/kubernetes-ci-images"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -71,6 +72,14 @@ func SetDefaults_MasterConfiguration(obj *MasterConfiguration) {
 
 	if obj.ImageRepository == "" {
 		obj.ImageRepository = DefaultImageRepository
+	}
+
+	if obj.NonCoreImageRepository == "" {
+		obj.NonCoreImageRepository = obj.ImageRepository
+	}
+
+	if obj.CIImageRepository == "" {
+		obj.CIImageRepository = DefaultCIImageRepository
 	}
 
 	if obj.Etcd.DataDir == "" {

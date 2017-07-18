@@ -44,7 +44,7 @@ func TestGetCoreImage(t *testing.T) {
 		{getCoreImageTest{o: "override"}, "override"},
 		{getCoreImageTest{
 			i: KubeEtcdImage,
-			c: &kubeadmapi.MasterConfiguration{ImageRepository: gcrPrefix}},
+			c: &kubeadmapi.MasterConfiguration{NonCoreImageRepository: gcrPrefix}},
 			fmt.Sprintf("%s/%s-%s:%s", gcrPrefix, "etcd", runtime.GOARCH, etcdVersion),
 		},
 		{getCoreImageTest{
