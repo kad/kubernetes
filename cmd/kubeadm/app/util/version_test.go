@@ -26,7 +26,7 @@ import (
 
 func TestEmptyVersion(t *testing.T) {
 
-	ver, err := KubernetesReleaseVersion("")
+	ver, err := KubernetesReleaseVersion("", "")
 	if err == nil {
 		t.Error("KubernetesReleaseVersion returned successfully, but error expected")
 	}
@@ -45,10 +45,10 @@ func TestValidVersion(t *testing.T) {
 		"v1.6.0-alpha.0.536+d60d9f3269288f",
 		"v1.5.0-alpha.0.1078+1044b6822497da-pull",
 		"v1.5.0-alpha.1.822+49b9e32fad9f32-pull-gke-gci",
-		"v1.6.1_coreos.0",
+		"v1.6.1+coreos.0",
 	}
 	for _, s := range validVersions {
-		ver, err := KubernetesReleaseVersion(s)
+		ver, err := KubernetesReleaseVersion(s, "")
 		t.Log("Valid: ", s, ver, err)
 		if err != nil {
 			t.Errorf("KubernetesReleaseVersion unexpected error for version %q: %v", s, err)
@@ -68,7 +68,7 @@ func TestInvalidVersion(t *testing.T) {
 		"something1.2",
 	}
 	for _, s := range invalidVersions {
-		ver, err := KubernetesReleaseVersion(s)
+		ver, err := KubernetesReleaseVersion(s, "")
 		t.Log("Invalid: ", s, ver, err)
 		if err == nil {
 			t.Errorf("KubernetesReleaseVersion error expected for version %q, but returned successfully", s)
@@ -86,7 +86,7 @@ func TestValidConvenientForUserVersion(t *testing.T) {
 		"1.6.1_coreos.0",
 	}
 	for _, s := range validVersions {
-		ver, err := KubernetesReleaseVersion(s)
+		ver, err := KubernetesReleaseVersion(s, "")
 		t.Log("Valid: ", s, ver, err)
 		if err != nil {
 			t.Errorf("KubernetesReleaseVersion unexpected error for version %q: %v", s, err)
@@ -125,10 +125,8 @@ func TestVersionFromNetwork(t *testing.T) {
 	}))
 	defer server.Close()
 
-	kubeReleaseBucketURL = server.URL
-
 	for k, v := range cases {
-		ver, err := KubernetesReleaseVersion(k)
+		ver, err := KubernetesReleaseVersion(k, server.URL)
 		t.Logf("Key: %q. Result: %q, Error: %v", k, ver, err)
 		switch {
 		case err != nil && !v.ErrorExpected:
@@ -162,6 +160,39 @@ func TestVersionToTag(t *testing.T) {
 		t.Logf("KubernetesVersionToImageTag: Input: %q. Result: %q. Expected: %q", tc.input, tag, tc.expected)
 		if tag != tc.expected {
 			t.Errorf("failed KubernetesVersionToImageTag: Input: %q. Result: %q. Expected: %q", tc.input, tag, tc.expected)
+		}
+	}
+}
+
+func TestKubernetesValidateVersion(t *testing.T) {
+	type T struct {
+		input    string
+		expected string
+		ci       bool
+		err      bool
+	}
+	cases := []T{
+		{"", "", false, true},
+		{"release/../xxx", "", false, true},
+		{"v1.7.2", "v1.7.2", false, false},
+		{"release/v1.7.2", "v1.7.2", false, false},
+		{"ci/v1.8.0-alpha.2.123+456789abcdef", "v1.8.0-alpha.2.123+456789abcdef", true, false},
+		{"ci-cross/v1.8.0-alpha.2.123+456789abcdef", "v1.8.0-alpha.2.123+456789abcdef", true, false},
+		{"unknown/v1.7.2", "", false, true},
+		{"ci/v1.7", "", true, true},
+	}
+
+	for _, tc := range cases {
+		ver, ci, err := KubernetesValidateVersion(tc.input)
+		switch {
+		case err != nil && !tc.err:
+			t.Errorf("KubernetesValidateVersion: unexpected error for %q. Error: %v", tc.input, err)
+		case err == nil && tc.err:
+			t.Errorf("KubernetesValidateVersion: error expected for %q, but result is %q", tc.input, ver)
+		case ver != tc.expected:
+			t.Errorf("KubernetesValidateVersion: unexpected result for %q. Expected: %q Actual: %q", tc.input, tc.expected, ver)
+		case ci != tc.ci:
+			t.Errorf("KubernetesValidateVersion: unexpected CI flag result for %q. Expected: %v Actual: %v", tc.input, tc.ci, ci)
 		}
 	}
 }

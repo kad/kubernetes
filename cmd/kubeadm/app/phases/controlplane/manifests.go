@@ -54,11 +54,16 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration, k8sVersion *ve
 	// Get the required hostpath mounts
 	mounts := getHostPathVolumesForTheControlPlane(cfg)
 
+	repoPrefix := cfg.ImageRepository
+	if cfg.CIImageRepository != "" {
+		repoPrefix = cfg.CIImageRepository
+	}
+
 	// Prepare static pod specs
 	staticPodSpecs := map[string]v1.Pod{
 		kubeadmconstants.KubeAPIServer: componentPod(v1.Container{
 			Name:          kubeadmconstants.KubeAPIServer,
-			Image:         images.GetCoreImage(kubeadmconstants.KubeAPIServer, cfg.ImageRepository, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
+			Image:         images.GetCoreImage(kubeadmconstants.KubeAPIServer, repoPrefix, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
 			Command:       getAPIServerCommand(cfg, k8sVersion),
 			VolumeMounts:  mounts.GetVolumeMounts(kubeadmconstants.KubeAPIServer),
 			LivenessProbe: componentProbe(int(cfg.API.BindPort), "/healthz", v1.URISchemeHTTPS),
@@ -67,7 +72,7 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration, k8sVersion *ve
 		}, mounts.GetVolumes(kubeadmconstants.KubeAPIServer)),
 		kubeadmconstants.KubeControllerManager: componentPod(v1.Container{
 			Name:          kubeadmconstants.KubeControllerManager,
-			Image:         images.GetCoreImage(kubeadmconstants.KubeControllerManager, cfg.ImageRepository, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
+			Image:         images.GetCoreImage(kubeadmconstants.KubeControllerManager, repoPrefix, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
 			Command:       getControllerManagerCommand(cfg, k8sVersion),
 			VolumeMounts:  mounts.GetVolumeMounts(kubeadmconstants.KubeControllerManager),
 			LivenessProbe: componentProbe(10252, "/healthz", v1.URISchemeHTTP),
@@ -76,7 +81,7 @@ func WriteStaticPodManifests(cfg *kubeadmapi.MasterConfiguration, k8sVersion *ve
 		}, mounts.GetVolumes(kubeadmconstants.KubeControllerManager)),
 		kubeadmconstants.KubeScheduler: componentPod(v1.Container{
 			Name:          kubeadmconstants.KubeScheduler,
-			Image:         images.GetCoreImage(kubeadmconstants.KubeScheduler, cfg.ImageRepository, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
+			Image:         images.GetCoreImage(kubeadmconstants.KubeScheduler, repoPrefix, cfg.KubernetesVersion, cfg.UnifiedControlPlaneImage),
 			Command:       getSchedulerCommand(cfg),
 			VolumeMounts:  mounts.GetVolumeMounts(kubeadmconstants.KubeScheduler),
 			LivenessProbe: componentProbe(10251, "/healthz", v1.URISchemeHTTP),
