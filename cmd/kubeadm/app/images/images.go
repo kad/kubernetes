@@ -40,7 +40,7 @@ func GetCoreImage(image string, cfg *kubeadmapi.MasterConfiguration, overrideIma
 	repoPrefix := cfg.ImageRepository
 	kubernetesImageTag := kubeadmutil.KubernetesVersionToImageTag(cfg.KubernetesVersion)
 	return map[string]string{
-		KubeEtcdImage:              fmt.Sprintf("%s/%s-%s:%s", repoPrefix, "etcd", runtime.GOARCH, etcdVersion),
+		KubeEtcdImage:              fmt.Sprintf("%s/%s-%s:%s", cfg.NonCoreImageRepository, "etcd", runtime.GOARCH, etcdVersion),
 		KubeAPIServerImage:         fmt.Sprintf("%s/%s-%s:%s", repoPrefix, "kube-apiserver", runtime.GOARCH, kubernetesImageTag),
 		KubeControllerManagerImage: fmt.Sprintf("%s/%s-%s:%s", repoPrefix, "kube-controller-manager", runtime.GOARCH, kubernetesImageTag),
 		KubeSchedulerImage:         fmt.Sprintf("%s/%s-%s:%s", repoPrefix, "kube-scheduler", runtime.GOARCH, kubernetesImageTag),
