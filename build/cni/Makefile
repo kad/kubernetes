@@ -18,8 +18,7 @@
 #	[ARCH=amd64] [CNI_RELEASE=v0.3.0] make (build|push)
 
 ARCH?=amd64
-# v0.5.2 tag
-CNI_RELEASE?=137b4975ecab6e1f0c24c1e3c228a50a3cfba75e
+CNI_RELEASE?=v0.6.0
 CNI_TARBALL=cni-$(ARCH)-$(CNI_RELEASE).tar.gz
 CUR_DIR=$(shell pwd)
 OUTPUT_DIR=$(CUR_DIR)/output
@@ -31,10 +30,20 @@ build:
 	mkdir -p $(OUTPUT_DIR)
 
 	docker run -it -e http_proxy=$(http_proxy) -e https_proxy=$(https_proxy) -v $(OUTPUT_DIR):/output:Z golang:$(GOLANG_VERSION) /bin/bash -c "\
-	git clone https://github.com/containernetworking/cni\
+    mkdir -p build/bin \
+    && cd build \
+	&& git clone https://github.com/containernetworking/cni\
 	&& cd cni \
 	&& git checkout $(CNI_RELEASE) \
+    && ln -s ../bin bin \
 	&& CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) ./build.sh \
+    && cd .. \
+    && git clone https://github.com/containernetworking/plugins\
+    && cd plugins \
+	&& git checkout $(CNI_RELEASE) \
+    && ln -s ../bin bin \
+	&& CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) ./build.sh \
+    && cd .. \
 	&& tar -zcvf $(CNI_TARBALL) bin/ \
 	&& mv $(CNI_TARBALL) /output/"
 
