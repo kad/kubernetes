@@ -45,24 +45,10 @@ func SetInitDynamicDefaults(cfg *kubeadmapi.MasterConfiguration) error {
 	}
 	cfg.API.AdvertiseAddress = ip.String()
 
-	// Requested version is automatic CI build, thus use KubernetesCI Image Repository for core images
-	if kubeadmutil.KubernetesIsCIVersion(cfg.KubernetesVersion) {
-		cfg.CIImageRepository = kubeadmconstants.DefaultCIImageRepository
-	}
-	// Validate version argument
-	ver, err := kubeadmutil.KubernetesReleaseVersion(cfg.KubernetesVersion)
+	// Validate and normalize requested Kubernetes version
+	err = NormalizeKubernetsVersion(cfg)
 	if err != nil {
 		return err
-	}
-	cfg.KubernetesVersion = ver
-
-	// Parse the given kubernetes version and make sure it's higher than the lowest supported
-	k8sVersion, err := version.ParseSemantic(cfg.KubernetesVersion)
-	if err != nil {
-		return fmt.Errorf("couldn't parse kubernetes version %q: %v", cfg.KubernetesVersion, err)
-	}
-	if k8sVersion.LessThan(kubeadmconstants.MinimumControlPlaneVersion) {
-		return fmt.Errorf("this version of kubeadm only supports deploying clusters with the control plane version >= %s. Current version: %s", kubeadmconstants.MinimumControlPlaneVersion.String(), cfg.KubernetesVersion)
 	}
 
 	if cfg.Token == "" {
@@ -122,4 +108,31 @@ func ConfigFileAndDefaultsToInternalConfig(cfgPath string, defaultversionedcfg *
 		return nil, err
 	}
 	return internalcfg, nil
+}
+
+// NormalizeKubernetsVersion resolves version labels, sets alternative
+// image registry if requested for CI builds, and validates minimal
+// version that kubeadm supports.
+func NormalizeKubernetsVersion(cfg *kubeadmapi.MasterConfiguration) error {
+	// Requested version is automatic CI build, thus use KubernetesCI Image Repository for core images
+	if kubeadmutil.KubernetesIsCIVersion(cfg.KubernetesVersion) {
+		cfg.CIImageRepository = kubeadmconstants.DefaultCIImageRepository
+	}
+
+	// Validate version argument
+	ver, err := kubeadmutil.KubernetesReleaseVersion(cfg.KubernetesVersion)
+	if err != nil {
+		return err
+	}
+	cfg.KubernetesVersion = ver
+
+	// Parse the given kubernetes version and make sure it's higher than the lowest supported
+	k8sVersion, err := version.ParseSemantic(cfg.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("couldn't parse kubernetes version %q: %v", cfg.KubernetesVersion, err)
+	}
+	if k8sVersion.LessThan(kubeadmconstants.MinimumControlPlaneVersion) {
+		return fmt.Errorf("this version of kubeadm only supports deploying clusters with the control plane version >= %s. Current version: %s", kubeadmconstants.MinimumControlPlaneVersion.String(), cfg.KubernetesVersion)
+	}
+	return nil
 }
