@@ -6,6 +6,8 @@ Summary: Container Cluster Manager
 
 URL: https://kubernetes.io
 
+%{?systemd_requires}
+BuildRequires: systemd
 Requires: iptables >= 1.4.21
 Requires: kubernetes-cni >= 0.5.1
 Requires: socat
@@ -19,13 +21,23 @@ The node agent of Kubernetes, the container cluster manager.
 
 %install
 
-install -m 755 -d %{buildroot}%{_bindir}
-install -m 755 -d %{buildroot}%{_sysconfdir}/systemd/system/
 install -m 755 -d %{buildroot}%{_sysconfdir}/kubernetes/manifests/
+install -m 755 -d %{buildroot}%{_bindir}
 install -p -m 755 -t %{buildroot}%{_bindir} kubelet
-install -p -m 755 -t %{buildroot}%{_sysconfdir}/systemd/system/ kubelet.service
+# install service file
+install -d -m 0755 %{buildroot}%{_unitdir}
+install -m 0644 -t %{buildroot}%{_unitdir} kubelet.service
+
+%post
+%systemd_post kubelet
+
+%preun
+%systemd_preun kubelet
+
+%postun
+%systemd_postun kubelet
 
 %files
 %{_bindir}/kubelet
-%{_sysconfdir}/systemd/system/kubelet.service
+%{_unitdir}/kubelet.service
 %{_sysconfdir}/kubernetes/manifests/
